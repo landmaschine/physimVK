@@ -1,0 +1,13 @@
+/.vs
+/.vscode
+/bin-int
+/build
+/glm.vcxproj
+/glm.vcxproj.filters
+/imgui.vcxproj
+/imgui.vcxproj.filters
+/physim2D.sln
+/physim2D.vcxproj
+/physim2D.vcxproj.filters
+/physim2D.vcxproj.user
+/vkbootstrap.vcxproj
