@@ -11,7 +11,7 @@ void Engine::init_engine() {
 
     particles.push_back(particle);
 
-    InitializeParticles(m_engineData.spawnParticles, m_engineData.particleRadius, particles);
+    //InitializeParticles(0, m_engineData.particleRadius, particles);
 }
 
 void Engine::shutdown() {
