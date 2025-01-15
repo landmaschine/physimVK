@@ -33,10 +33,17 @@ void PhysicsEngine::solveVerlet(std::vector<Particle>& particles, float dt) {
 }
 
 void PhysicsEngine::checkCollisions(std::vector<Particle>& particles) {
-    const size_t particleCount = particles.size();
-    for (size_t i = 0; i < particleCount; ++i) {
-        for (size_t j = i + 1; j < particleCount; ++j) {
-            checkCollision(particles[i], particles[j]);
+    grid.clear();
+    for(const auto& particle : particles) {
+        grid.insert(particle);
+    }
+
+    for(auto& particle : particles) {
+        auto neighbors = grid.getNeighbors(particle);
+        for(const auto* neighbor : neighbors) {
+            if(&particle != neighbor) {
+                checkCollision(particle, *const_cast<Particle*>(neighbor));
+            }
         }
     }
 }

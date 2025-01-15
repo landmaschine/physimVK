@@ -64,7 +64,7 @@ void Engine::input() {
         particles[0].curr_pos = mousePos;
     }
 
-    if(perfData.frameTime < 30.f) {
+    if(perfData.frameTime < 16.666f) {
         if (m_input.isMouseButtonPressed(SDL_BUTTON_RIGHT)) {
             constexpr float PI = 3.14159f;
             const float spawnRadius = 10.f;

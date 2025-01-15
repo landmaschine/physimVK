@@ -1,8 +1,9 @@
 #include "core/common.hpp"
+#include "uniformGrid.hpp"
 
 class PhysicsEngine {
 public:
-    PhysicsEngine() {}
+    PhysicsEngine() : grid(100.f) {}
     ~PhysicsEngine() {}
 
     void update(std::vector<Particle>& particles, float dt);
@@ -17,4 +18,6 @@ private:
 
     vec2 boundMin;
     vec2 boundMax;
+
+    UniformGrid grid;
 };
