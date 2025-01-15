@@ -1,6 +1,7 @@
 #include "input.hpp"
+#include "renderer/rendererVK.hpp"
 
-void Input::update(SDL_Event& event, bool& quit) {
+void Input::update(SDL_Event& event, bool& quit, RendererVK& rendererVK) {
     int new_width = 0;
     int new_height = 0;
 
@@ -28,6 +29,12 @@ void Input::update(SDL_Event& event, bool& quit) {
         }
         
         ImGui_ImplSDL3_ProcessEvent(&event);
+
+        if(event.type == SDL_EVENT_WINDOW_RESIZED) {
+            int width, height;
+            SDL_GetWindowSizeInPixels(rendererVK._window, &width, &height);
+            rendererVK.resize(width, height);
+        }
     }
 }
 

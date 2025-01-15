@@ -1,13 +1,14 @@
 #pragma once
 #include "core/common.hpp"
 #include <unordered_map>
+#include "renderer/rendererVK.hpp"
 
 class Input {
     public:
         Input() {}
         ~Input() {}
 
-        void update(SDL_Event& event, bool& quit);
+        void update(SDL_Event& event, bool& quit, RendererVK& rendererVK);
         bool isKeyPressed(SDL_Scancode scancode) const;
         bool isMouseButtonPressed(uint8_t button) const;
     private:

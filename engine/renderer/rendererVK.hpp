@@ -50,12 +50,22 @@ struct {
     uint32_t maxParticles{100000};
 } _particleBuffers;
 
+struct ParticleComputeSystem {
+	VkPipeline pipeline;
+	VkPipelineLayout layout;
+	VkDescriptorSetLayout descriptorLayout;
+	VkDescriptorSet descriptorSet;
+
+	AllocatedBuffer particleBufferIn;
+	AllocatedBuffer particleBufferOut;
+};
+
 class RendererVK {
 public:
 	bool _isInitialized{ false };
 	int _frameNumber {0};
 	bool stop_rendering{false};
-	VkExtent2D _windowExtent{ 1920 , 1080 };
+	VkExtent2D _windowExtent{};
 
 	struct SDL_Window* _window{ nullptr };
 
@@ -105,6 +115,7 @@ public:
 	VkDescriptorSetLayout _drawImageDescriptorLayout;
 
 	DeletionQueue _mainDeletionQueue;
+	DeletionQueue _swapchainDeletionQueue;
 
 	VmaAllocator _allocator;
 	VkFence _immFence;
@@ -116,14 +127,14 @@ public:
 	std::vector<ComputeEffect> backgroundEffects;
 	int currentBackgroundEffect{ 0 };
 
-	void init();
+	void init(int width, int height);
 	void cleanup();
 	void draw(const std::vector<Particle>& particles);
+	void resize(uint32_t width, uint32_t height);
 
 	void draw_background(VkCommandBuffer cmd);
 	void draw_geometry(VkCommandBuffer cmd, const std::vector<Particle>& particles);
 	void draw_imgui(VkCommandBuffer cmd,  VkImageView targetImageView);
-	void draw_particle(VkCommandBuffer cmd, const Particle& particle);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 	void init_particle_buffers();
@@ -136,7 +147,7 @@ private:
     void init_pipelines();
     void init_background_pipelines();
     void init_imgui();
-	void init_circle_mesh(int segments = 8);
+	void init_circle_mesh(int segments = 32);
 
 	glm::mat4 projection;
     

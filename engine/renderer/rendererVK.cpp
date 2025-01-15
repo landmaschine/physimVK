@@ -17,11 +17,14 @@
 
 constexpr bool bUseValidationLayers = true;
 
-void RendererVK::init() {
+void RendererVK::init(int width, int height) {
 	SDL_Init(SDL_INIT_VIDEO);
 
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 	
+	_windowExtent.width = width;
+	_windowExtent.height = height;
+
 	_window = SDL_CreateWindow(
 		"Vulkan Engine",
 		_windowExtent.width,
@@ -68,6 +71,7 @@ void RendererVK::cleanup() {
 			vkDestroySemaphore(_device ,_frames[i]._swapchainSemaphore, nullptr);
 		}
 
+		_swapchainDeletionQueue.flush();
 		_mainDeletionQueue.flush();
 
 		destroy_swapchain();
@@ -228,27 +232,6 @@ void RendererVK::draw_geometry(VkCommandBuffer cmd, const std::vector<Particle>&
     vkCmdEndRendering(cmd);
 }
 
-void RendererVK::draw_particle(VkCommandBuffer cmd, const Particle& particle) {
-	GPUDrawPushConstants push_constants;
-    
-    glm::mat4 translation = glm::translate(glm::mat4(1.0f), 
-        glm::vec3(particle.curr_pos.x, particle.curr_pos.y, 0.0f));
-    
-    glm::mat4 scale = glm::scale(glm::mat4(1.0f), 
-        glm::vec3(particle.radius, particle.radius, 1.0f));
-    
-    push_constants.world_matrix = translation * scale;
-	push_constants.projection = projection;
-    push_constants.vertexBuffer = _circleMesh.buffers.vertexBufferAddress;
-
-    vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 
-        0, sizeof(GPUDrawPushConstants), &push_constants);
-
-	vkCmdBindIndexBuffer(cmd, _circleMesh.buffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-	vkCmdDrawIndexed(cmd, _circleMesh.indexCount, 1, 0, 0, 0);
-}
-
 void RendererVK::init_vulkan() {
 	vkb::InstanceBuilder builder;
 	
@@ -332,6 +315,17 @@ void RendererVK::create_swapchain(uint32_t width, uint32_t height) {
 }
 
 void RendererVK::init_swapchain() {
+	int width, height;
+	SDL_GetWindowSizeInPixels(_window, &width, &height);
+
+	while(width == 0 || height == 0) {
+		SDL_GetWindowSizeInPixels(_window, &width, &height);
+		SDL_WaitEvent(NULL);
+	}
+
+	_windowExtent.width = width;
+	_windowExtent.height = height;
+
 	create_swapchain(_windowExtent.width, _windowExtent.height);
 	VkExtent3D drawImageExtent = {
 		_windowExtent.width,
@@ -360,7 +354,7 @@ void RendererVK::init_swapchain() {
 
 	VK_CHECK(vkCreateImageView(_device, &rview_info, nullptr, &_drawImage.imageView));
 
-	_mainDeletionQueue.push_function([this]() {
+	_swapchainDeletionQueue.push_function([this]() {
 		vkDestroyImageView(_device, _drawImage.imageView, nullptr);
 		vmaDestroyImage(_allocator, _drawImage.image, _drawImage.allocation);
 	});
@@ -462,12 +456,17 @@ void RendererVK::init_background_pipelines() {
 
 	VkShaderModule gradientShader;
 	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/gradient_comp.spv", _device, &gradientShader)) {
-		std::cout << "Error when building compute shader\n";
+		std::cout << "Error when building gradient compute shader\n";
 	}
 
 	VkShaderModule skyShader;
 	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/sky_comp.spv", _device, &skyShader)) {
-		std::cout << "Error when building compute shader\n";
+		std::cout << "Error when building sky compute shader\n";
+	}
+
+	VkShaderModule blackShader;
+	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/black_comp.spv", _device, &blackShader)) {
+		std::cout << "Error when building black compute shader\n";
 	}
 
 	VkPipelineShaderStageCreateInfo stageinfo{};
@@ -483,7 +482,7 @@ void RendererVK::init_background_pipelines() {
 	computePipelineCreateInfo.layout = _gradientPipelineLayout;
 	computePipelineCreateInfo.stage = stageinfo;
 
-	ComputeEffect gradient;
+	ComputeEffect gradient {};
 	gradient.layout = _gradientPipelineLayout;
 	gradient.name = "gradient";
 	gradient.data = {};
@@ -495,19 +494,30 @@ void RendererVK::init_background_pipelines() {
 
 	computePipelineCreateInfo.stage.module = skyShader;
 
-	ComputeEffect sky;
+	ComputeEffect sky {};
 	sky.layout = _gradientPipelineLayout;
 	sky.name = "sky";
 	sky.data.data1 = glm::vec4(0.1, 0.2, 0.4, 0.97);
 
 	VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &sky.pipeline));
 
-	backgroundEffects.push_back(gradient);
-	backgroundEffects.push_back(sky);
+	computePipelineCreateInfo.stage.module = blackShader;
 
+	ComputeEffect black {};
+	black.layout = _gradientPipelineLayout;
+	black.name = "black";
+	black.data = {};
+
+	VK_CHECK(vkCreateComputePipelines(_device, VK_NULL_HANDLE, 1, &computePipelineCreateInfo, nullptr, &black.pipeline));
+
+	backgroundEffects.push_back(black);
+	backgroundEffects.push_back(sky);
+	backgroundEffects.push_back(gradient);
 
 	vkDestroyShaderModule(_device, gradientShader, nullptr);
 	vkDestroyShaderModule(_device, skyShader, nullptr);
+	vkDestroyShaderModule(_device, blackShader, nullptr);
+
 	_mainDeletionQueue.push_function([&]() {
 		vkDestroyPipelineLayout(_device, _gradientPipelineLayout, nullptr);
 		for(auto& effect : backgroundEffects) {
@@ -705,7 +715,7 @@ GPUMeshBuffers RendererVK::uploadMesh(std::span<uint32_t> indices, std::span<Ver
 
 void RendererVK::init_mesh_pipeline() {
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
+	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
 		std::cout << "Error when building the particle fragment shader module\n";
 	}
 	else {
@@ -713,7 +723,7 @@ void RendererVK::init_mesh_pipeline() {
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("shaders/particle_instance.vert.spv", _device, &triangleVertexShader)) {
+	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/particle_instance.vert.spv", _device, &triangleVertexShader)) {
 		std::cout << "Error when building the particle vertex shader module\n";
 	}
 	else {
@@ -792,7 +802,7 @@ void RendererVK::init_circle_mesh(int segments) {
     vertices.push_back(center);
     
     for (int i = 0; i < segments; i++) {
-        float angle = (2.0f * M_PI * i) / segments;
+        float angle = (2.0f * 3.1415926535 * i) / segments;
         Vertex v;
         v.position = {
             cos(angle),
@@ -845,4 +855,33 @@ void RendererVK::init_particle_buffers() {
             _particleBuffers.instanceBuffer.buffer,
             _particleBuffers.instanceBuffer.allocation);
     });
+}
+
+void RendererVK::resize(uint32_t width, uint32_t height) {
+	if (width == 0 || height == 0) return;
+    
+    vkDeviceWaitIdle(_device);
+    
+    _windowExtent.width = width;
+    _windowExtent.height = height;
+    
+	_swapchainDeletionQueue.flush();
+    destroy_swapchain();
+
+    init_swapchain();
+    
+    VkDescriptorImageInfo imgInfo{};
+    imgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imgInfo.imageView = _drawImage.imageView;
+    
+    VkWriteDescriptorSet drawImageWrite = {};
+    drawImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    drawImageWrite.pNext = nullptr;
+    drawImageWrite.dstBinding = 0;
+    drawImageWrite.dstSet = _drawImageDescriptors;
+    drawImageWrite.descriptorCount = 1;
+    drawImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    drawImageWrite.pImageInfo = &imgInfo;
+
+    vkUpdateDescriptorSets(_device, 1, &drawImageWrite, 0, nullptr);
 }

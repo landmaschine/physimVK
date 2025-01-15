@@ -6,6 +6,7 @@ struct Particle {
     vec2 prev_pos;
     vec2 accel;
     float radius;
+    bool isPlayer;
 };
 
 struct Player : public Particle {
@@ -19,4 +20,5 @@ typedef struct EnginePerformanceData_t {
     double collisionTime = 0;
     double verletTime = 0;
     double renderTime = 0;
+    double fps = 0;
 } EnginePerformanceData;

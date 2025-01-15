@@ -2,6 +2,7 @@
 #include "core/common.hpp"
 #include "renderer/rendererVK.hpp"
 #include "input/input.hpp"
+#include "physics/physics.hpp"
 
 #include <random>
 #include <thread>
@@ -21,7 +22,7 @@ typedef struct EngineData_t {
     const double targetFrameTime = 1 / 165.f;
 
     const size_t MaxParticles = 100000;
-    const size_t spawnParticles = 1 - 1;
+    const size_t spawnParticles = 1000 - 1;
     const float particleRadius = 3.f;
     const float maxParticleRadius = 10.f;
 } EngineData;
@@ -41,9 +42,12 @@ private:
     bool m_stop;
     Input m_input;
     EngineData m_engineData;
-    SDL_Event m_event;
+    EnginePerformanceData perfData;
 
+    SDL_Event m_event;
     RendererVK rendererVK;
+    PhysicsEngine physics;
+    vec2 windowSize = vec2(1920, 1080);
 
     std::vector<Particle> particles;
 };
@@ -111,6 +115,7 @@ inline void InitializeParticles(size_t particleCount, const float radius, std::v
             particle.prev_pos = position;
             particle.accel = vec2(0.f, 0.f);
             particle.radius = radius;
+            particle.isPlayer = false;
             particles.push_back(particle);
             placed++;
         }
