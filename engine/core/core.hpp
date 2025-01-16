@@ -23,7 +23,7 @@ typedef struct EngineData_t {
 
     const size_t MaxParticles = 100000;
     const size_t spawnParticles = 1000 - 1;
-    const float particleRadius = 5.f;
+    const float particleRadius = 1.f;
     const float maxParticleRadius = 10.f;
 } EngineData;
 
@@ -115,7 +115,6 @@ inline void InitializeParticles(size_t particleCount, const float radius, std::v
             particle.prev_pos = position;
             particle.accel = vec2(0.f, 0.f);
             particle.radius = radius;
-            particle.isPlayer = false;
             particles.push_back(particle);
             placed++;
         }

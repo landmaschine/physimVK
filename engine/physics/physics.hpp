@@ -1,9 +1,13 @@
 #include "core/common.hpp"
 #include "uniformGrid.hpp"
 
+#include <omp.h>
+
+#pragma optimize("gt", on)
+
 class PhysicsEngine {
 public:
-    PhysicsEngine() : grid(100.f) {}
+    PhysicsEngine() : grid(15.f) {}
     ~PhysicsEngine() {}
 
     void update(std::vector<Particle>& particles, float dt);
@@ -20,4 +24,5 @@ private:
     vec2 boundMax;
 
     UniformGrid grid;
+    std::vector<const Particle*> neighbors;
 };

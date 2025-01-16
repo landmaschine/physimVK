@@ -7,7 +7,6 @@ void Engine::init_engine() {
     Particle particle;
     particle.curr_pos = vec2(100.f, 100.f);
     particle.radius = 10.f;
-    particle.isPlayer = true;
 
     particles.push_back(particle);
 
@@ -85,7 +84,6 @@ void Engine::input() {
                 newParticle.radius = m_engineData.particleRadius;
                 newParticle.curr_pos = spawnPos;
                 newParticle.prev_pos = spawnPos;
-                newParticle.isPlayer = false;
                 
                 particles.push_back(newParticle);
             }

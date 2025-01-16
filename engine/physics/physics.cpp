@@ -16,7 +16,7 @@ void PhysicsEngine::solveVerlet(std::vector<Particle>& particles, float dt) {
     auto verlstart = std::chrono::high_resolution_clock::now();
 
     for(auto& particle : particles) {
-        if(!particle.isPlayer) {
+        if(!(&particle == &particles[0])) {
             vec2 vel = particle.curr_pos - particle.prev_pos;
 
             vec2 temp = particle.curr_pos;
@@ -39,7 +39,7 @@ void PhysicsEngine::checkCollisions(std::vector<Particle>& particles) {
     }
 
     for(auto& particle : particles) {
-        auto neighbors = grid.getNeighbors(particle);
+        grid.getNeighbors(particle, neighbors);
         for(const auto* neighbor : neighbors) {
             if(&particle != neighbor) {
                 checkCollision(particle, *const_cast<Particle*>(neighbor));

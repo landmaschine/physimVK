@@ -6,7 +6,6 @@ struct Particle {
     vec2 prev_pos;
     vec2 accel;
     float radius;
-    bool isPlayer;
 };
 
 struct Player : public Particle {
