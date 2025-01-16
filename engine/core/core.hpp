@@ -15,15 +15,16 @@ typedef struct EngineData_t {
     uint64_t elapsedTicks= 0;
     double accumulator = 0.f;
 
-    const float timeStep = 1.f / 200.f;
+    const float timeStep = 1.f / 165.f;
     const double maxFrameTime = 0.25f;
-    const int maxSteps = 2;
+    const int maxSteps = 3;
+    const int maxCatchUpSteps = 3;
 
     const double targetFrameTime = 1 / 165.f;
 
     const size_t MaxParticles = 100000;
     const size_t spawnParticles = 1000 - 1;
-    const float particleRadius = 1.f;
+    const float particleRadius = 1.5f;
     const float maxParticleRadius = 10.f;
 } EngineData;
 

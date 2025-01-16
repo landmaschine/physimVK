@@ -11,7 +11,7 @@ void PhysicsEngine::setPhysicsBoundary(const vec2 minBoundary, const vec2 maxBou
 }
 
 void PhysicsEngine::solveVerlet(std::vector<Particle>& particles, float dt) {
-    const vec2 gravity{0.f, 500.f};
+    const vec2 gravity{0.f, 400.f};
 
     auto verlstart = std::chrono::high_resolution_clock::now();
 
@@ -21,7 +21,7 @@ void PhysicsEngine::solveVerlet(std::vector<Particle>& particles, float dt) {
 
             vec2 temp = particle.curr_pos;
             particle.accel += gravity;
-            particle.curr_pos = particle.curr_pos + vel + particle.accel * (dt * dt);
+            particle.curr_pos = particle.curr_pos + vel + (particle.accel - vel * 40.f) * (dt * dt);
             particle.prev_pos = temp;
             particle.accel = vec2(0.0f, 0.0f);
         }

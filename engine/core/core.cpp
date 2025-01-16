@@ -4,9 +4,11 @@ void Engine::init_engine() {
     m_stop = false;
     rendererVK.init(windowSize.x, windowSize.y);
 
+    particles.reserve(m_engineData.MaxParticles);
+
     Particle particle;
-    particle.curr_pos = vec2(100.f, 100.f);
-    particle.radius = 10.f;
+    particle.curr_pos = vec2(0.f, 0.f);
+    particle.radius = 0.f;
 
     particles.push_back(particle);
 
@@ -63,11 +65,11 @@ void Engine::input() {
         particles[0].curr_pos = mousePos;
     }
 
-    if(perfData.frameTime < 16.666f) {
+    if(perfData.frameTime < 16.f) {
         if (m_input.isMouseButtonPressed(SDL_BUTTON_RIGHT)) {
             constexpr float PI = 3.14159f;
             const float spawnRadius = 10.f;
-            const int numParticlesToSpawn = 30;
+            const int numParticlesToSpawn = 20;
 
             for (int i = 0; i < numParticlesToSpawn; i++) {
                 float randomAngle = static_cast<float>(rand()) / RAND_MAX * 2.f * PI;
@@ -95,14 +97,13 @@ void Engine::update() {
     auto start = std::chrono::high_resolution_clock::now();
 
     int numSteps = 0;
-    const int maxCatchUpSteps = 6;
 
     int width, height;
     SDL_GetWindowSizeInPixels(rendererVK._window, &width, &height);
     windowSize = vec2(width, height);
     physics.setPhysicsBoundary(vec2(0.0, 0.0), windowSize);
 
-    while(m_engineData.accumulator >= m_engineData.timeStep && numSteps < maxCatchUpSteps) {
+    while(m_engineData.accumulator >= m_engineData.timeStep && numSteps < m_engineData.maxCatchUpSteps) {
         const float sub_dt = m_engineData.timeStep / float(m_engineData.maxSteps);
         for(int i = 0; i < m_engineData.maxSteps; ++i) {
             physics.update(particles, sub_dt);
@@ -111,7 +112,7 @@ void Engine::update() {
         numSteps++;
     }
 
-    if(numSteps >= maxCatchUpSteps) {
+    if(numSteps >= m_engineData.maxCatchUpSteps) {
         m_engineData.accumulator = 0;
     }
 

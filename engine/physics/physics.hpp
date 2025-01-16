@@ -7,7 +7,7 @@
 
 class PhysicsEngine {
 public:
-    PhysicsEngine() : grid(15.f) {}
+    PhysicsEngine() : grid(20.f) {}
     ~PhysicsEngine() {}
 
     void update(std::vector<Particle>& particles, float dt);

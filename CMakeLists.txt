@@ -22,7 +22,7 @@ find_package(Vulkan REQUIRED)
 if(MSVC)
 
 else()
-    add_compile_options(-O3 -march=native -mavx)
+    add_compile_options(-O3 -march=native -mavx -g)
 endif()
 
 add_subdirectory(${GLM_DIR})
