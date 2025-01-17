@@ -129,11 +129,11 @@ public:
 
 	void init(int width, int height);
 	void cleanup();
-	void draw(const std::vector<Particle>& particles);
+	void draw(const Particles& particles);
 	void resize(uint32_t width, uint32_t height);
 
 	void draw_background(VkCommandBuffer cmd);
-	void draw_geometry(VkCommandBuffer cmd, const std::vector<Particle>& particles);
+	void draw_geometry(VkCommandBuffer cmd, const Particles& particles);
 	void draw_imgui(VkCommandBuffer cmd,  VkImageView targetImageView);
 
 	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);

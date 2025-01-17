@@ -15,6 +15,7 @@ set(VMA_DIR ${THIRD_PARTY}/VMA)
 set(VKBOOTSTRAP_DIR ${THIRD_PARTY}/vkbootstrap)
 set(GLM_DIR ${THIRD_PARTY}/glm)
 set(IMGUI_DIR ${THIRD_PARTY}/imgui)
+set(FMT_DIR ${THIRD_PARTY}/fmt)
 set(ENGINE_DIR ${CMAKE_SOURCE_DIR}/engine)
 
 find_package(Vulkan REQUIRED)
@@ -23,14 +24,17 @@ if(MSVC)
 
 else()
     add_compile_options(-O3 -march=native -mavx -g)
+    link_libraries(stdc++)
 endif()
 
 add_subdirectory(${GLM_DIR})
+add_subdirectory(${FMT_DIR})
 
 add_library(vkbootstrap STATIC
     ${VKBOOTSTRAP_DIR}/VkBootstrap.h
     ${VKBOOTSTRAP_DIR}/VkBootstrap.cpp
 )
+
 target_include_directories(vkbootstrap PUBLIC ${THIRD_PARTY})
 target_link_libraries(vkbootstrap PUBLIC Vulkan::Vulkan)
 
@@ -55,13 +59,18 @@ target_link_libraries(imgui PUBLIC
     Vulkan::Vulkan
 )
 
-file(GLOB GAME_SOURCES ${CMAKE_SOURCE_DIR}/game/*.cpp ${CMAKE_SOURCE_DIR}/game/*.h)
+file(GLOB GAME_SOURCES 
+    ${CMAKE_SOURCE_DIR}/game/*.cpp 
+    ${CMAKE_SOURCE_DIR}/game/*.h
+)
+
 file(GLOB_RECURSE ENGINE_SOURCES
     ${CMAKE_SOURCE_DIR}/engine/*.c
     ${CMAKE_SOURCE_DIR}/engine/*.cpp
     ${CMAKE_SOURCE_DIR}/engine/*.h
     ${CMAKE_SOURCE_DIR}/engine/*.hpp
 )
+
 set(SOURCES ${GAME_SOURCES} ${ENGINE_SOURCES})
 
 add_executable(physim2D ${SOURCES})
@@ -75,12 +84,14 @@ target_include_directories(physim2D PRIVATE
     ${ENGINE_DIR}
     ${Vulkan_INCLUDE_DIRS}
     ${IMGUI_DIR}
+    ${FMT_DIR}/fmt/include
 )
 
 target_link_libraries(physim2D PRIVATE
     ${SDL_DIR}/SDL3.lib
     ${SDL_IMAGE_DIR}/SDL3_image.lib
     ${SDL_TTF_DIR}/SDL3_ttf.lib
+    fmt
     glm
     vkbootstrap
     Vulkan::Vulkan

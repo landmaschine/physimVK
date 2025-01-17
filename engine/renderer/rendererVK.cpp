@@ -86,7 +86,7 @@ void RendererVK::cleanup() {
 	}
 }
 
-void RendererVK::draw(const std::vector<Particle>& particles) {
+void RendererVK::draw(const Particles& particles) {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
 
 	get_current_frame()._deletionQueue.flush();
@@ -165,7 +165,7 @@ void RendererVK::draw_background(VkCommandBuffer cmd) {
 	vkCmdDispatch(cmd, std::ceil(_drawExtent.width / 16.0), std::ceil(_drawExtent.height / 16.0), 1);
 }
 
-void RendererVK::draw_geometry(VkCommandBuffer cmd, const std::vector<Particle>& particles) {
+void RendererVK::draw_geometry(VkCommandBuffer cmd, const Particles& particles) {
 	projection = glm::ortho(0.0f, (float)_drawExtent.width, 
         0.0f, (float)_drawExtent.height, -1.0f, 1.0f);
 
@@ -194,10 +194,14 @@ void RendererVK::draw_geometry(VkCommandBuffer cmd, const std::vector<Particle>&
 
 	ParticleInstance* instanceData = static_cast<ParticleInstance*>(_particleBuffers.instanceBuffer.info.pMappedData);
     
+	 const float* curr_pos_x = particles.curr_pos_x.data();
+    const float* curr_pos_y = particles.curr_pos_y.data();
+    const float* radius_data = particles.radius.data();
+    
+    // Update instance data
     for (size_t i = 0; i < particles.size(); i++) {
-        const auto& particle = particles[i];
-        instanceData[i].position = particle.curr_pos;
-        instanceData[i].radius = particle.radius;
+        instanceData[i].position = {curr_pos_x[i], curr_pos_y[i]};
+        instanceData[i].radius = radius_data[i];
     }
 
     VkMappedMemoryRange range{};

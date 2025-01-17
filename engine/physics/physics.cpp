@@ -1,8 +1,8 @@
 #include "physics.hpp"
 
-void PhysicsEngine::update(std::vector<Particle>& particles, float dt) {
+void PhysicsEngine::update(Particles& particles, EnginePerformanceData& perf, float dt) {
     solveVerlet(particles, dt);
-    checkCollisions(particles);
+    checkCollisions(particles, perf);
 }
 
 void PhysicsEngine::setPhysicsBoundary(const vec2 minBoundary, const vec2 maxBoundary) {
@@ -10,101 +10,122 @@ void PhysicsEngine::setPhysicsBoundary(const vec2 minBoundary, const vec2 maxBou
     boundMax = maxBoundary;
 }
 
-void PhysicsEngine::solveVerlet(std::vector<Particle>& particles, float dt) {
-    const vec2 gravity{0.f, 400.f};
-
+void PhysicsEngine::solveVerlet(Particles& particles, float dt) {
+const vec2 gravity{0.f, 400.f};
     auto verlstart = std::chrono::high_resolution_clock::now();
 
-    for(auto& particle : particles) {
-        if(!(&particle == &particles[0])) {
-            vec2 vel = particle.curr_pos - particle.prev_pos;
+    float* curr_pos_x = particles.curr_pos_x.data();
+    float* curr_pos_y = particles.curr_pos_y.data();
+    float* prev_pos_x = particles.prev_pos_x.data();
+    float* prev_pos_y = particles.prev_pos_y.data();
 
-            vec2 temp = particle.curr_pos;
-            particle.accel += gravity;
-            particle.curr_pos = particle.curr_pos + vel + (particle.accel - vel * 40.f) * (dt * dt);
-            particle.prev_pos = temp;
-            particle.accel = vec2(0.0f, 0.0f);
-        }
-        clampToBounds(particle);
+    #pragma omp parallel for
+    for(size_t i = 1; i < particles.size(); i++) { 
+        float vel_x = curr_pos_x[i] - prev_pos_x[i];
+        float vel_y = curr_pos_y[i] - prev_pos_y[i];
+
+        float temp_x = curr_pos_x[i];
+        float temp_y = curr_pos_y[i];
+
+        curr_pos_x[i] = curr_pos_x[i] + vel_x + (gravity.x - vel_x * 40.f) * (dt * dt);
+        curr_pos_y[i] = curr_pos_y[i] + vel_y + (gravity.y - vel_y * 40.f) * (dt * dt);
+
+        prev_pos_x[i] = temp_x;
+        prev_pos_y[i] = temp_y;
+
+        clampToBounds(particles, i);
     }
 
     auto verlend = std::chrono::high_resolution_clock::now();
     auto velduration = std::chrono::duration_cast<std::chrono::microseconds>(verlend - verlstart);
 }
 
-void PhysicsEngine::checkCollisions(std::vector<Particle>& particles) {
-    grid.clear();
-    for(const auto& particle : particles) {
-        grid.insert(particle);
-    }
-
-    for(auto& particle : particles) {
-        grid.getNeighbors(particle, neighbors);
-        for(const auto* neighbor : neighbors) {
-            if(&particle != neighbor) {
-                checkCollision(particle, *const_cast<Particle*>(neighbor));
+void PhysicsEngine::checkCollisions(Particles& particles, EnginePerformanceData& perf) {
+    #pragma omp parallel for schedule(dynamic) reduction(+:collision_count)
+    for(size_t i = 0; i < particles.size(); i++) {
+        for(size_t j = i + 1; j < particles.size(); j++) {
+            float dx = particles.curr_pos_x[i] - particles.curr_pos_x[j];
+            float dy = particles.curr_pos_y[i] - particles.curr_pos_y[j];
+            
+            float distSquared = dx * dx + dy * dy;
+            float minDist = particles.radius[i] + particles.radius[j];
+            
+            if (distSquared < minDist * minDist) {
+                checkCollision(particles, i, j);
             }
         }
-    }
+    } 
 }
 
-void PhysicsEngine::checkCollision(Particle& particle1, Particle& particle2) {
+void PhysicsEngine::checkCollision(Particles& particles, size_t idx1, size_t idx2) {
     const float responseCoef = 0.75f;
 
-    vec2 posDiff = particle1.curr_pos - particle2.curr_pos;
+    vec2 pos1{particles.curr_pos_x[idx1], particles.curr_pos_y[idx1]};
+    vec2 pos2{particles.curr_pos_x[idx2], particles.curr_pos_y[idx2]};
+    
+    vec2 posDiff = pos1 - pos2;
     float distSquared = posDiff.x * posDiff.x + posDiff.y * posDiff.y;
-    float minDist = particle1.radius + particle2.radius;
+    float minDist = particles.radius[idx1] + particles.radius[idx2];
 
     if (distSquared < minDist * minDist) {
         float dist = sqrt(distSquared);
         vec2 normal = posDiff / dist;
 
-        float massRatio1 = particle1.radius / (particle1.radius + particle2.radius);
-        float massRatio2 = particle2.radius / (particle1.radius + particle2.radius);
+        float massRatio1 = particles.radius[idx1] / (particles.radius[idx1] + particles.radius[idx2]);
+        float massRatio2 = particles.radius[idx2] / (particles.radius[idx1] + particles.radius[idx2]);
 
         float delta = 0.5f * responseCoef * (dist - minDist);
 
-        particle1.curr_pos -= normal * (massRatio2 * delta);
-        particle2.curr_pos += normal * (massRatio1 * delta);
+        particles.curr_pos_x[idx1] -= normal.x * (massRatio2 * delta);
+        particles.curr_pos_y[idx1] -= normal.y * (massRatio2 * delta);
+        particles.curr_pos_x[idx2] += normal.x * (massRatio1 * delta);
+        particles.curr_pos_y[idx2] += normal.y * (massRatio1 * delta);
     }
 }
 
-void PhysicsEngine::clampToBounds(Particle& particle) {
-    const float collisionOffset = particle.radius * 0.1f; 
-    const float hardClampOffset = particle.radius * 0.5f;
+void PhysicsEngine::clampToBounds(Particles& particles, size_t idx) {
+    const float radius = particles.radius[idx];
+    const float collisionOffset = radius * 0.1f;
+    const float hardClampOffset = radius * 0.5f;
     
-    Particle boundaryParticle = particle;
+    vec2 curr_pos{particles.curr_pos_x[idx], particles.curr_pos_y[idx]};
     
-    if (particle.curr_pos.x - particle.radius < boundMin.x + collisionOffset) {
-        boundaryParticle.curr_pos = vec2(boundMin.x - particle.radius + collisionOffset, particle.curr_pos.y);
-        checkCollision(particle, boundaryParticle);
-    }
-    
-    if (particle.curr_pos.x + particle.radius > boundMax.x - collisionOffset) {
-        boundaryParticle.curr_pos = vec2(boundMax.x + particle.radius - collisionOffset, particle.curr_pos.y);
-        checkCollision(particle, boundaryParticle);
+    if (curr_pos.x - radius < boundMin.x + collisionOffset) {
+        vec2 boundary_pos{boundMin.x - radius + collisionOffset, curr_pos.y};
+        float delta = boundMin.x + collisionOffset - (curr_pos.x - radius);
+        particles.curr_pos_x[idx] += delta;
     }
     
-    if (particle.curr_pos.y - particle.radius < boundMin.y + collisionOffset) {
-        boundaryParticle.curr_pos = vec2(particle.curr_pos.x, boundMin.y - particle.radius + collisionOffset);
-        checkCollision(particle, boundaryParticle);
+    if (curr_pos.x + radius > boundMax.x - collisionOffset) {
+        vec2 boundary_pos{boundMax.x + radius - collisionOffset, curr_pos.y};
+        float delta = (curr_pos.x + radius) - (boundMax.x - collisionOffset);
+        particles.curr_pos_x[idx] -= delta;
     }
     
-    if (particle.curr_pos.y + particle.radius > boundMax.y - collisionOffset) {
-        boundaryParticle.curr_pos = vec2(particle.curr_pos.x, boundMax.y + particle.radius - collisionOffset);
-        checkCollision(particle, boundaryParticle);
+    if (curr_pos.y - radius < boundMin.y + collisionOffset) {
+        vec2 boundary_pos{curr_pos.x, boundMin.y - radius + collisionOffset};
+        float delta = boundMin.y + collisionOffset - (curr_pos.y - radius);
+        particles.curr_pos_y[idx] += delta;
     }
     
-    if (particle.curr_pos.x - particle.radius < boundMin.x - hardClampOffset) {
-        particle.curr_pos.x = boundMin.x - hardClampOffset + particle.radius;
+    if (curr_pos.y + radius > boundMax.y - collisionOffset) {
+        vec2 boundary_pos{curr_pos.x, boundMax.y + radius - collisionOffset};
+        float delta = (curr_pos.y + radius) - (boundMax.y - collisionOffset);
+        particles.curr_pos_y[idx] -= delta;
     }
-    if (particle.curr_pos.x + particle.radius > boundMax.x + hardClampOffset) {
-        particle.curr_pos.x = boundMax.x + hardClampOffset - particle.radius;
+    
+    curr_pos = {particles.curr_pos_x[idx], particles.curr_pos_y[idx]};
+    
+    if (curr_pos.x - radius < boundMin.x - hardClampOffset) {
+        particles.curr_pos_x[idx] = boundMin.x - hardClampOffset + radius;
     }
-    if (particle.curr_pos.y - particle.radius < boundMin.y - hardClampOffset) {
-        particle.curr_pos.y = boundMin.y - hardClampOffset + particle.radius;
+    if (curr_pos.x + radius > boundMax.x + hardClampOffset) {
+        particles.curr_pos_x[idx] = boundMax.x + hardClampOffset - radius;
     }
-    if (particle.curr_pos.y + particle.radius > boundMax.y + hardClampOffset) {
-        particle.curr_pos.y = boundMax.y + hardClampOffset - particle.radius;
+    if (curr_pos.y - radius < boundMin.y - hardClampOffset) {
+        particles.curr_pos_y[idx] = boundMin.y - hardClampOffset + radius;
+    }
+    if (curr_pos.y + radius > boundMax.y + hardClampOffset) {
+        particles.curr_pos_y[idx] = boundMax.y + hardClampOffset - radius;
     }
 }

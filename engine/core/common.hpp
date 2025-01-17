@@ -25,6 +25,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include "fmt/base.h"
 #include "types/types.hpp"
 #include "SDL3/SDL.h"
 #include "SDL_image/SDL_image.h"

@@ -10,7 +10,7 @@ void Engine::init_engine() {
     particle.curr_pos = vec2(0.f, 0.f);
     particle.radius = 0.f;
 
-    particles.push_back(particle);
+    particles.add_particle(particle.curr_pos, particle.prev_pos, particle.radius);
 
     //InitializeParticles(0, m_engineData.particleRadius, particles);
 }
@@ -58,11 +58,13 @@ void Engine::input() {
     vec2 mousePos;
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
     if(m_input.isMouseButtonPressed(SDL_BUTTON_LEFT)) {
-        particles[0].radius = 20.f;
-        particles[0].curr_pos = mousePos;
+        particles.radius[0] = 20.f;
+        particles.curr_pos_x[0] = mousePos.x;
+        particles.curr_pos_y[0] = mousePos.y;
     } else {
-        particles[0].radius = 0.0f;
-        particles[0].curr_pos = mousePos;
+        particles.radius[0] = 0.0f;
+        particles.curr_pos_x[0] = mousePos.x;
+        particles.curr_pos_y[0] = mousePos.y;
     }
 
     if(perfData.frameTime < 16.f) {
@@ -87,7 +89,7 @@ void Engine::input() {
                 newParticle.curr_pos = spawnPos;
                 newParticle.prev_pos = spawnPos;
                 
-                particles.push_back(newParticle);
+                particles.add_particle(spawnPos, spawnPos, m_engineData.particleRadius);
             }
         }
     }
@@ -106,7 +108,7 @@ void Engine::update() {
     while(m_engineData.accumulator >= m_engineData.timeStep && numSteps < m_engineData.maxCatchUpSteps) {
         const float sub_dt = m_engineData.timeStep / float(m_engineData.maxSteps);
         for(int i = 0; i < m_engineData.maxSteps; ++i) {
-            physics.update(particles, sub_dt);
+            physics.update(particles, perfData, sub_dt);
         }
         m_engineData.accumulator -= m_engineData.timeStep;
         numSteps++;
@@ -117,9 +119,9 @@ void Engine::update() {
     }
 
     auto end = std::chrono::high_resolution_clock::now();
-    auto updateDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto updateDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 
-    perfData.updateTime = updateDuration.count();
+    perfData.updateTime = updateDuration.count() / 1000.f;
 }
 
 void Engine::render() {
@@ -152,7 +154,7 @@ void Engine::renderGui() {
 
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-    ImGui::Text("Update time: %.2f ms | Render Time: %.2f ms | FPS: %2.f | Particles: %d", perfData.updateTime, perfData.renderTime, perfData.fps, particles.size());
+    ImGui::Text("Update time: %.2f ms | Grid Time: %.2f ms | FPS: %2.f | Particles: %d", perfData.updateTime, perfData.gridTime, perfData.fps, particles.size());
 
     ImGui::PopStyleColor();
     ImGui::End();

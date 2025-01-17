@@ -50,7 +50,7 @@ private:
     PhysicsEngine physics;
     vec2 windowSize = vec2(1920, 1080);
 
-    std::vector<Particle> particles;
+    Particles particles;
 };
 
 inline void InitializeParticles(size_t particleCount, const float radius, std::vector<Particle>& particles) {
@@ -114,7 +114,6 @@ inline void InitializeParticles(size_t particleCount, const float radius, std::v
             Particle particle;
             particle.curr_pos = position;
             particle.prev_pos = position;
-            particle.accel = vec2(0.f, 0.f);
             particle.radius = radius;
             particles.push_back(particle);
             placed++;
