@@ -1,7 +1,7 @@
 #include "rendererVK.hpp"
 
-#include "SDL/SDL3/SDL.h"
-#include "SDL/SDL3/SDL_vulkan.h"
+#include "SDL3/SDL.h"
+#include "SDL3/SDL_vulkan.h"
 
 #include "vk_types.h"
 #include "vk_initializers.h"
@@ -94,7 +94,11 @@ void RendererVK::draw(const Particles& particles) {
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 	
 	uint32_t swapchainImageIndex;
-	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex));
+	if(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex) == VK_SUBOPTIMAL_KHR) {	
+		int width, height;
+		SDL_GetWindowSizeInPixels(_window, &width, &height);
+		resize(width, height);
+	}
 	
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
@@ -148,7 +152,11 @@ void RendererVK::draw(const Particles& particles) {
 
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
-	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+	if(vkQueuePresentKHR(_graphicsQueue, &presentInfo) == VK_SUBOPTIMAL_KHR) {
+		int width, height;
+		SDL_GetWindowSizeInPixels(_window, &width, &height);
+		resize(width, height);
+	}
 	
 	_frameNumber++;
 }
@@ -459,17 +467,17 @@ void RendererVK::init_background_pipelines() {
 	VK_CHECK(vkCreatePipelineLayout(_device, &computeLayout, nullptr, &_gradientPipelineLayout));
 
 	VkShaderModule gradientShader;
-	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/gradient_comp.spv", _device, &gradientShader)) {
+	if (!vkutil::load_shader_module("shaders/gradient_comp.spv", _device, &gradientShader)) {
 		std::cout << "Error when building gradient compute shader\n";
 	}
 
 	VkShaderModule skyShader;
-	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/sky_comp.spv", _device, &skyShader)) {
+	if (!vkutil::load_shader_module("shaders/sky_comp.spv", _device, &skyShader)) {
 		std::cout << "Error when building sky compute shader\n";
 	}
 
 	VkShaderModule blackShader;
-	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/black_comp.spv", _device, &blackShader)) {
+	if (!vkutil::load_shader_module("shaders/black_comp.spv", _device, &blackShader)) {
 		std::cout << "Error when building black compute shader\n";
 	}
 
@@ -610,7 +618,7 @@ void RendererVK::init_imgui() {
 	float dpiScale = 1.5f;
 	ImGui::GetStyle().ScaleAllSizes(dpiScale);
 
-	io.Fonts->AddFontFromFileTTF("C:/Users/leon/Documents/dev/physimVK/bin/fonts/DepartureMono-Regular.otf", 44, &config);
+	io.Fonts->AddFontFromFileTTF("fonts/DepartureMono-Regular.otf", 44, &config);
 
 	unsigned char* pixels;
     int width, height;
@@ -719,7 +727,7 @@ GPUMeshBuffers RendererVK::uploadMesh(std::span<uint32_t> indices, std::span<Ver
 
 void RendererVK::init_mesh_pipeline() {
 	VkShaderModule triangleFragShader;
-	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
+	if (!vkutil::load_shader_module("shaders/colored_triangle.frag.spv", _device, &triangleFragShader)) {
 		std::cout << "Error when building the particle fragment shader module\n";
 	}
 	else {
@@ -727,7 +735,7 @@ void RendererVK::init_mesh_pipeline() {
 	}
 
 	VkShaderModule triangleVertexShader;
-	if (!vkutil::load_shader_module("C:/Users/leon/Documents/dev/physimVK/bin/shaders/particle_instance.vert.spv", _device, &triangleVertexShader)) {
+	if (!vkutil::load_shader_module("shaders/particle_instance.vert.spv", _device, &triangleVertexShader)) {
 		std::cout << "Error when building the particle vertex shader module\n";
 	}
 	else {

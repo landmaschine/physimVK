@@ -1,7 +1,7 @@
 #pragma once
 #include "core/common.hpp"
-#include "SDL/SDL3/SDL_vulkan.h"
-#include "SDL/SDL3/SDL_stdinc.h"
+#include "SDL3/SDL_vulkan.h"
+#include "SDL3/SDL_stdinc.h"
 
 #include "vk_types.h"
 #include "vk_initializers.h"

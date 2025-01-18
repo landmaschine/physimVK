@@ -1,10 +1,6 @@
 #include "core/common.hpp"
 #include "uniformGrid.hpp"
 
-#include <omp.h>
-
-#pragma optimize("gt", on)
-
 class PhysicsEngine {
 public:
     PhysicsEngine() : grid(20.f) {}

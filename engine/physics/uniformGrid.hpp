@@ -10,12 +10,14 @@ public:
         grid.clear();
     }
 
-    void insert(const Particle& particle) {
+    void insert(const Particles& particles, size_t index) {
         std::lock_guard<std::mutex> lock(grid_mutex);
-        const auto minCell = computeCell(particle.curr_pos - vec2(particle.radius, particle.radius));
-        const auto maxCell = computeCell(particle.curr_pos + vec2(particle.radius, particle.radius));
 
-        const int cellCount = (maxCell.x - minCell.x + 2) * (maxCell.y - minCell.y + 1);
+        float radius = particles.radius[index];
+        vec2 position{particles.curr_pos_x[index], particles.curr_pos_y[index]};
+
+        const auto minCell = computeCell(position - vec2(radius, radius));
+        const auto maxCell = computeCell(position + vec2(radius, radius));
 
         for (int x = minCell.x; x <= maxCell.x; ++x) {
             for (int y = minCell.y; y <= maxCell.y; ++y) {
@@ -23,15 +25,19 @@ public:
                 if (cell.capacity() == 0) {
                     cell.reserve(8);
                 }
-                cell.push_back(&particle);
+                cell.push_back(index);
             }
         }
     }
 
-    void getNeighbors(const Particle& particle, std::vector<const Particle*>& neighbors) {
+    void getNeighbors(const Particles& particles, size_t index, std::vector<size_t>& neighbors) {
         neighbors.clear();
-        vec2 minPos = particle.curr_pos - vec2(particle.radius, particle.radius);
-        vec2 maxPos = particle.curr_pos + vec2(particle.radius, particle.radius);
+
+        float radius = particles.radius[index];
+        vec2 position{particles.curr_pos_x[index], particles.curr_pos_y[index]};
+
+        vec2 minPos = position - vec2(radius, radius);
+        vec2 maxPos = position + vec2(radius, radius);
         auto minCell = computeCell(minPos);
         auto maxCell = computeCell(maxPos);
 
@@ -50,15 +56,17 @@ private:
 
     struct CellHash {
         std::size_t operator()(const std::pair<int, int>& cell) const {
-            return (static_cast<size_t>(cell.first) << 32) | static_cast<size_t>(cell.second);
+            std::size_t h1 = std::hash<int>{}(cell.first);
+            std::size_t h2 = std::hash<int>{}(cell.second);
+            return h1 ^ (h2 << 1);
         }
     };
 
     inline vec2i computeCell(const vec2& position) const {
         return vec2i(static_cast<int>(std::floor(position.x / cellSize)),
-                     static_cast<int>(std::floor(position.y / cellSize)));
+                    static_cast<int>(std::floor(position.y / cellSize)));
     }
 
     float cellSize;
-    std::unordered_map<std::pair<int, int>, std::vector<const Particle*>, CellHash> grid;
+    std::unordered_map<std::pair<int, int>, std::vector<size_t>, CellHash> grid;
 };

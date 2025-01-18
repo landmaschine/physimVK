@@ -11,8 +11,6 @@ void Engine::init_engine() {
     particle.radius = 0.f;
 
     particles.add_particle(particle.curr_pos, particle.prev_pos, particle.radius);
-
-    //InitializeParticles(0, m_engineData.particleRadius, particles);
 }
 
 void Engine::shutdown() {

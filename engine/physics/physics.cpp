@@ -11,7 +11,7 @@ void PhysicsEngine::setPhysicsBoundary(const vec2 minBoundary, const vec2 maxBou
 }
 
 void PhysicsEngine::solveVerlet(Particles& particles, float dt) {
-const vec2 gravity{0.f, 400.f};
+    const vec2 gravity{0.f, 400.f};
     auto verlstart = std::chrono::high_resolution_clock::now();
 
     float* curr_pos_x = particles.curr_pos_x.data();
@@ -19,7 +19,6 @@ const vec2 gravity{0.f, 400.f};
     float* prev_pos_x = particles.prev_pos_x.data();
     float* prev_pos_y = particles.prev_pos_y.data();
 
-    #pragma omp parallel for
     for(size_t i = 1; i < particles.size(); i++) { 
         float vel_x = curr_pos_x[i] - prev_pos_x[i];
         float vel_y = curr_pos_y[i] - prev_pos_y[i];
@@ -41,20 +40,21 @@ const vec2 gravity{0.f, 400.f};
 }
 
 void PhysicsEngine::checkCollisions(Particles& particles, EnginePerformanceData& perf) {
-    #pragma omp parallel for schedule(dynamic) reduction(+:collision_count)
+    grid.clear();
+
     for(size_t i = 0; i < particles.size(); i++) {
-        for(size_t j = i + 1; j < particles.size(); j++) {
-            float dx = particles.curr_pos_x[i] - particles.curr_pos_x[j];
-            float dy = particles.curr_pos_y[i] - particles.curr_pos_y[j];
-            
-            float distSquared = dx * dx + dy * dy;
-            float minDist = particles.radius[i] + particles.radius[j];
-            
-            if (distSquared < minDist * minDist) {
+        grid.insert(particles, i);
+    }
+
+    for(size_t i = 0; i < particles.size(); i++) {
+        grid.getNeighbors(particles, i, neighbors);
+
+        for(size_t j : neighbors) {
+            if(j > i) {
                 checkCollision(particles, i, j);
             }
         }
-    } 
+    }
 }
 
 void PhysicsEngine::checkCollision(Particles& particles, size_t idx1, size_t idx2) {

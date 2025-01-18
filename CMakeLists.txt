@@ -9,8 +9,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
 set(THIRD_PARTY ${CMAKE_SOURCE_DIR}/third_party)
 set(SDL_DIR ${THIRD_PARTY}/SDL)
-set(SDL_IMAGE_DIR ${THIRD_PARTY}/SDL_image)
-set(SDL_TTF_DIR ${THIRD_PARTY}/SDL_ttf)
 set(VMA_DIR ${THIRD_PARTY}/VMA)
 set(VKBOOTSTRAP_DIR ${THIRD_PARTY}/vkbootstrap)
 set(GLM_DIR ${THIRD_PARTY}/glm)
@@ -23,10 +21,24 @@ find_package(Vulkan REQUIRED)
 if(MSVC)
 
 else()
-    add_compile_options(-O3 -march=native -mavx -g)
+    add_compile_options(
+        -O3
+        -march=native
+        -mavx2
+        -ffast-math 
+        -funroll-loops 
+        -fomit-frame-pointer
+        -fpeel-loops
+        -ftracer
+        -ftree-vectorize 
+        -ftree-loop-vectorize
+        -fopenmp-simd 
+    )
+    add_link_options(-flto)
     link_libraries(stdc++)
 endif()
 
+add_subdirectory(${SDL_DIR})
 add_subdirectory(${GLM_DIR})
 add_subdirectory(${FMT_DIR})
 
@@ -50,12 +62,12 @@ add_library(imgui STATIC
 
 target_include_directories(imgui PUBLIC
     ${IMGUI_DIR}
-    ${SDL_DIR}
+    ${SDL_DIR}/include
     ${Vulkan_INCLUDE_DIRS}
 )
 
 target_link_libraries(imgui PUBLIC
-    ${SDL_DIR}/SDL3.lib
+    ${SDL_DIR}/build/libSDL3.so
     Vulkan::Vulkan
 )
 
@@ -77,9 +89,7 @@ add_executable(physim2D ${SOURCES})
 
 target_include_directories(physim2D PRIVATE
     ${THIRD_PARTY}
-    ${SDL_DIR}
-    ${SDL_IMAGE_DIR}
-    ${SDL_TTF_DIR}
+    ${SDL_DIR}/include
     ${VMA_DIR}
     ${ENGINE_DIR}
     ${Vulkan_INCLUDE_DIRS}
@@ -88,9 +98,7 @@ target_include_directories(physim2D PRIVATE
 )
 
 target_link_libraries(physim2D PRIVATE
-    ${SDL_DIR}/SDL3.lib
-    ${SDL_IMAGE_DIR}/SDL3_image.lib
-    ${SDL_TTF_DIR}/SDL3_ttf.lib
+    SDL3::SDL3
     fmt
     glm
     vkbootstrap
@@ -98,8 +106,9 @@ target_link_libraries(physim2D PRIVATE
     imgui
 )
 
-add_custom_command(TARGET physim2D POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_DIR}/SDL3.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_IMAGE_DIR}/SDL3_image.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_TTF_DIR}/SDL3_ttf.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-)
+
+#add_custom_command(TARGET physim2D POST_BUILD
+#    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_DIR}/SDL3.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+#    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_IMAGE_DIR}/SDL3_image.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+#    COMMAND ${CMAKE_COMMAND} -E copy ${SDL_TTF_DIR}/SDL3_ttf.dll ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+#)
