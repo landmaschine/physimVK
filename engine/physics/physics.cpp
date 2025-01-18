@@ -1,4 +1,5 @@
 #include "physics.hpp"
+#include <omp.h>
 
 void PhysicsEngine::update(Particles& particles, EnginePerformanceData& perf, float dt) {
     solveVerlet(particles, dt);
@@ -48,7 +49,6 @@ void PhysicsEngine::checkCollisions(Particles& particles, EnginePerformanceData&
 
     for(size_t i = 0; i < particles.size(); i++) {
         grid.getNeighbors(particles, i, neighbors);
-
         for(size_t j : neighbors) {
             if(j > i) {
                 checkCollision(particles, i, j);

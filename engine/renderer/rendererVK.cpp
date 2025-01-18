@@ -88,18 +88,19 @@ void RendererVK::cleanup() {
 
 void RendererVK::draw(const Particles& particles) {
 	VK_CHECK(vkWaitForFences(_device, 1, &get_current_frame()._renderFence, true, 1000000000));
-
 	get_current_frame()._deletionQueue.flush();
-
 	VK_CHECK(vkResetFences(_device, 1, &get_current_frame()._renderFence));
 	
 	uint32_t swapchainImageIndex;
-	if(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex) == VK_SUBOPTIMAL_KHR) {	
-		int width, height;
-		SDL_GetWindowSizeInPixels(_window, &width, &height);
-		resize(width, height);
-	}
+ 	VkResult result = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIndex);
 	
+	if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        int width, height;
+        SDL_GetWindowSizeInPixels(_window, &width, &height);
+        resize(width, height);
+        return;
+    }
+
 	VkCommandBuffer cmd = get_current_frame()._mainCommandBuffer;
 
 	VK_CHECK(vkResetCommandBuffer(cmd, 0));
@@ -152,11 +153,14 @@ void RendererVK::draw(const Particles& particles) {
 
 	presentInfo.pImageIndices = &swapchainImageIndex;
 
-	if(vkQueuePresentKHR(_graphicsQueue, &presentInfo) == VK_SUBOPTIMAL_KHR) {
-		int width, height;
-		SDL_GetWindowSizeInPixels(_window, &width, &height);
-		resize(width, height);
-	}
+	result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        int width, height;
+        SDL_GetWindowSizeInPixels(_window, &width, &height);
+        resize(width, height);
+    } else {
+        VK_CHECK(result);
+    }
 	
 	_frameNumber++;
 }

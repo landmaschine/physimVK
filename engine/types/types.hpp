@@ -1,6 +1,10 @@
 #pragma once
 #include "math/simMath.hpp"
 
+#include <string>
+#include <fstream>
+#include <vector>
+
 struct Particle {
     vec2 curr_pos;
     vec2 prev_pos;
@@ -92,10 +96,6 @@ struct Particles {
     float* radius_data() { return radius.data(); }
 };
 
-struct Player : public Particle {
-    vec2 targetPos;
-};
-
 typedef struct EnginePerformanceData_t {
     double frameTime = 0;
     double inputTime = 0;
@@ -106,3 +106,23 @@ typedef struct EnginePerformanceData_t {
     double renderTime = 0;
     double fps = 0;
 } EnginePerformanceData;
+
+struct ProcessMemoryStats {
+    long minor_faults;
+    long major_faults;
+
+    static ProcessMemoryStats get() {
+        ProcessMemoryStats stats;
+        std::ifstream stat_file("proc/self/stat");
+
+        std::string unused;
+        for(int i = 0; i < 9; i++) {
+            stat_file >> unused;
+        }
+        stat_file >> stats.minor_faults;
+        stat_file >> unused;
+        stat_file >> stats.major_faults;
+
+        return stats;
+    }
+};

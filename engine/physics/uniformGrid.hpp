@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <omp.h>
+
 class UniformGrid {
 public:
     UniformGrid(float cellSize) : cellSize(cellSize) {}
@@ -11,8 +13,6 @@ public:
     }
 
     void insert(const Particles& particles, size_t index) {
-        std::lock_guard<std::mutex> lock(grid_mutex);
-
         float radius = particles.radius[index];
         vec2 position{particles.curr_pos_x[index], particles.curr_pos_y[index]};
 
@@ -32,6 +32,7 @@ public:
 
     void getNeighbors(const Particles& particles, size_t index, std::vector<size_t>& neighbors) {
         neighbors.clear();
+        neighbors.reserve(14);
 
         float radius = particles.radius[index];
         vec2 position{particles.curr_pos_x[index], particles.curr_pos_y[index]};
@@ -43,17 +44,16 @@ public:
 
         for (int x = minCell.x; x <= maxCell.x; ++x) {
             for (int y = minCell.y; y <= maxCell.y; ++y) {
-                auto cell = grid.find({x, y});
-                if (cell != grid.end()) {
-                    neighbors.insert(neighbors.end(), cell->second.begin(), cell->second.end());
+                auto cellIter = grid.find({x, y});
+                if (cellIter != grid.end()) {
+                    const auto& cellParticles = cellIter->second;
+                    neighbors.insert(neighbors.end(), cellParticles.begin(), cellParticles.end());
                 }
             }
-        }
+        } 
     }
 
 private:
-    mutable std::mutex grid_mutex;
-
     struct CellHash {
         std::size_t operator()(const std::pair<int, int>& cell) const {
             std::size_t h1 = std::hash<int>{}(cell.first);

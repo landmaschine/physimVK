@@ -31,7 +31,6 @@ else()
         -fpeel-loops
         -ftracer
         -ftree-vectorize 
-        -ftree-loop-vectorize
         -fopenmp-simd 
     )
     add_link_options(-flto)
