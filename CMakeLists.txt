@@ -25,13 +25,7 @@ else()
         -O3
         -march=native
         -mavx2
-        -ffast-math 
-        -funroll-loops 
-        -fomit-frame-pointer
-        -fpeel-loops
-        -ftracer
-        -ftree-vectorize 
-        -fopenmp-simd 
+        -g
     )
     add_link_options(-flto)
     link_libraries(stdc++)

@@ -206,11 +206,10 @@ void RendererVK::draw_geometry(VkCommandBuffer cmd, const Particles& particles) 
 
 	ParticleInstance* instanceData = static_cast<ParticleInstance*>(_particleBuffers.instanceBuffer.info.pMappedData);
     
-	 const float* curr_pos_x = particles.curr_pos_x.data();
-    const float* curr_pos_y = particles.curr_pos_y.data();
-    const float* radius_data = particles.radius.data();
+	const float* curr_pos_x = particles.curr_pos_x;
+    const float* curr_pos_y = particles.curr_pos_y;
+    const float* radius_data = particles.radius;
     
-    // Update instance data
     for (size_t i = 0; i < particles.size(); i++) {
         instanceData[i].position = {curr_pos_x[i], curr_pos_y[i]};
         instanceData[i].radius = radius_data[i];

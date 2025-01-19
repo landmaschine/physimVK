@@ -54,6 +54,7 @@ void Engine::input() {
     m_input.update(m_event, m_stop, rendererVK);
 
     vec2 mousePos;
+    
     SDL_GetMouseState(&mousePos.x, &mousePos.y);
     if(m_input.isMouseButtonPressed(SDL_BUTTON_LEFT)) {
         particles.radius[0] = 20.f;
@@ -65,11 +66,12 @@ void Engine::input() {
         particles.curr_pos_y[0] = mousePos.y;
     }
 
+
     if(perfData.frameTime < 16.f) {
         if (m_input.isMouseButtonPressed(SDL_BUTTON_RIGHT)) {
             constexpr float PI = 3.14159f;
             const float spawnRadius = 10.f;
-            const int numParticlesToSpawn = 20;
+            const int numParticlesToSpawn = 32;
 
             for (int i = 0; i < numParticlesToSpawn; i++) {
                 float randomAngle = static_cast<float>(rand()) / RAND_MAX * 2.f * PI;
@@ -130,7 +132,7 @@ void Engine::render() {
     auto end = std::chrono::high_resolution_clock::now();
     auto renderDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
-    perfData.renderTime = renderDuration.count();
+    perfData.renderTime = renderDuration.count() / 1000.f;
 
     perfData.frameTime = 0;
     perfData.frameTime = perfData.updateTime + perfData.renderTime;
@@ -152,7 +154,7 @@ void Engine::renderGui() {
 
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-    ImGui::Text("Update time: %.2f ms | Grid Time: %.2f ms | FPS: %2.f | Particles: %d", perfData.updateTime, perfData.gridTime, perfData.fps, particles.size());
+    ImGui::Text("Update time: %.2f ms | Render time: %.2f ms | FPS: %2.f | Particles: %d", perfData.updateTime, perfData.renderTime, perfData.fps, particles.size());
 
     ImGui::PopStyleColor();
     ImGui::End();
